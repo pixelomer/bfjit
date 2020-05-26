@@ -1,9 +1,19 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <mach/mach.h>
+#include <string.h>
+#include <unistd.h>
 #include <errno.h>
 #include <stdbool.h>
+
+#if __APPLE__
+#include <mach/mach.h>
+#elif __linux__
+#include <malloc.h>
+#include <sys/mman.h>
+#else
+#error Unsupported target
+#endif
 
 uint8_t brainfuck_memory[0x10000];
 uint8_t shared_instruction_buffer[0x400];
@@ -216,14 +226,24 @@ int main(int argc, char **argv) {
 
 	// Construct the function
 	uint32_t buffer_index = 0;
-	uint8_t *function_construction_buffer = malloc(buffer_size);
+	uint8_t *function_construction_buffer;
+	uint32_t real_buffer_size = buffer_size;
+#if __APPLE__
+	function_construction_buffer = malloc(buffer_size);
+#elif __linux__
+	const int linux_page_size = sysconf(_SC_PAGE_SIZE);
+	assert(linux_page_size != -1);
+	real_buffer_size += (linux_page_size - (buffer_size % linux_page_size)) % linux_page_size;
+	function_construction_buffer = memalign(linux_page_size, real_buffer_size);
+	assert(function_construction_buffer != NULL);
+#endif
 	for (uint32_t i=0; i<count; i++) {
 		memcpy(function_construction_buffer+buffer_index, instructions[i].machine_code, instructions[i].machine_code_size);
 		buffer_index += instructions[i].machine_code_size;
 	}
 
-	// Write the function to a file
 #if DEBUG
+	// Write the function to a file
 	FILE *outfile = fopen("function.dump", "w");
 	if (outfile) {
 		if (fwrite(function_construction_buffer, buffer_size, 1, outfile) == 1) {
@@ -242,7 +262,11 @@ int main(int argc, char **argv) {
 	free(instructions);
 
 	// Make the function executable
-	assert(vm_protect(mach_task_self(), (vm_address_t)function_construction_buffer, buffer_size, 0, VM_PROT_EXECUTE | VM_PROT_READ) == KERN_SUCCESS);
+#if __APPLE__
+	assert(vm_protect(mach_task_self(), (vm_address_t)function_construction_buffer, real_buffer_size, 0, VM_PROT_EXECUTE | VM_PROT_READ) == KERN_SUCCESS);
+#elif __linux__
+	assert(mprotect(function_construction_buffer, real_buffer_size, PROT_READ | PROT_EXEC) != -1);
+#endif
 
 	// Call the function
 	debug_printf("Executing...\n");
@@ -250,7 +274,11 @@ int main(int argc, char **argv) {
 	debug_printf("Execution completed.\n");
 
 	// Free the function
-	assert(vm_protect(mach_task_self(), (vm_address_t)function_construction_buffer, buffer_size, 0, VM_PROT_WRITE | VM_PROT_READ) == KERN_SUCCESS);
+#if __APPLE__
+	assert(vm_protect(mach_task_self(), (vm_address_t)function_construction_buffer, real_buffer_size, 0, VM_PROT_WRITE | VM_PROT_READ) == KERN_SUCCESS);
+#elif __linux__
+	assert(mprotect(function_construction_buffer, real_buffer_size, PROT_READ | PROT_WRITE) != -1);
+#endif
 	free(function_construction_buffer);
 
 	return return_value;
