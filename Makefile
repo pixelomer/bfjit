@@ -1,7 +1,7 @@
 CC ?= clang
-DEBUG ?= 1
+DEBUG ?= 0
 LDFLAGS =
-CFLAGS = -include macros.h -Wall -Werror
+CFLAGS = -include macros.h -DDEBUG=$(DEBUG) -Wall -Werror
 ifeq ($(shell uname),Darwin)
 LDFLAGS += -lSystem
 endif
