@@ -45,6 +45,17 @@ uint8_t *make_add_instruction(uint8_t value_to_add, uint8_t *size) {
 	return instruction;
 }
 
+// 0
+uint8_t *make_zero_instruction(uint8_t *size) {
+	uint8_t *instruction = &shared_instruction_buffer[0];
+	static const uint8_t template[] = {
+		0x28, 0xC0  // SUB AL, AL
+	};
+	if (size) *size = sizeof(template);
+	memcpy(instruction, template, sizeof(template));
+	return instruction;
+}
+
 // -
 uint8_t *make_substract_instruction(uint8_t value_to_substract, uint8_t *size) {
 	uint8_t *instruction = make_add_instruction(value_to_substract, size);

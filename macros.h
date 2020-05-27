@@ -27,4 +27,5 @@ extern uint8_t *make_loop_end_instruction(int32_t loop_begin_offset, uint8_t *si
 extern uint8_t *make_increment_memory_pt_instruction(uint16_t change, uint8_t *size);
 extern uint8_t *make_decrement_memory_pt_instruction(uint16_t change, uint8_t *size);
 extern uint8_t *make_output_instruction(uint8_t *size);
+extern uint8_t *make_zero_instruction(uint8_t *size);
 extern uint8_t *make_input_instruction(uint8_t *size);

@@ -98,7 +98,7 @@ static brainfuck_instruction_t *parse_brainfuck(char *code, uint32_t *size_pt) {
 				while ((c = *(code_pt += change))) {
 					if (c == ']') bracket_counter--;
 					else if (c == '[') bracket_counter++;
-					if ((previous_c != c) || (c == '.') || (c == ',') || (c == '[') || (c == ']')) final_i += change;
+					if ((previous_c != c) || (c == '.') || (c == ',') || (c == '[') || (c == ']') || (c == '0')) final_i += change;
 					previous_c = c;
 					if (!bracket_counter) break;
 				}
@@ -117,6 +117,11 @@ static brainfuck_instruction_t *parse_brainfuck(char *code, uint32_t *size_pt) {
 				current_instruction.machine_code = make_jit_footer(&current_instruction.machine_code_size);
 				break;
 			}
+			case '0': {
+				current_instruction.machine_code = make_zero_instruction(&current_instruction.machine_code_size);
+				break;
+			}
+			default: assert(false);
 		}
 		if (!current_instruction.machine_code) {
 			current_instruction.machine_code_size = 0;
@@ -234,14 +239,21 @@ int main(int _argc, char **_argv) {
 				!strncmp(brainfuck_code+i, "><", 2)
 			);
 			if (should_delete) {
-				memmove(brainfuck_code+i, brainfuck_code+i+2, (brainfuck_code_size+1)-i-2);
+				memmove(brainfuck_code+i, brainfuck_code+i+2, strlen(brainfuck_code+i+2)+1);
 				brainfuck_code_size -= 2;
 				should_continue = 1;
 				i--;
 			}
-			if (!strncmp(brainfuck_code+i, ",,", 2)) {
-				memmove(brainfuck_code+i, brainfuck_code+i+1, (brainfuck_code_size+1)-i-1);
+			else if (!strncmp(brainfuck_code+i, ",,", 2)) {
+				memmove(brainfuck_code+i, brainfuck_code+i+1, strlen(brainfuck_code+i+1)+1);
 				brainfuck_code_size -= 1;
+				should_continue = 1;
+				i--;
+			}
+			else if (!strncmp(brainfuck_code+i, "[-]", 3)) {
+				memmove(brainfuck_code+i, brainfuck_code+i+2, strlen(brainfuck_code+i+2)+1);
+				brainfuck_code[i] = '0';
+				brainfuck_code_size -= 2;
 				should_continue = 1;
 				i--;
 			}
@@ -250,9 +262,10 @@ int main(int _argc, char **_argv) {
 		if (!should_continue) break;
 	}
 	brainfuck_code_size += 3;
-	brainfuck_code = realloc(brainfuck_code, brainfuck_code_size+2);
+	brainfuck_code = realloc(brainfuck_code, brainfuck_code_size+1);
 	memmove(brainfuck_code+1, brainfuck_code, brainfuck_code_size-2);
 	brainfuck_code[0] = 's';
+	brainfuck_code[brainfuck_code_size] = 0;
 	brainfuck_code[brainfuck_code_size-1] = 'e';
 	brainfuck_code[brainfuck_code_size-2] = '>';
 
