@@ -190,6 +190,12 @@ int main(int argc, char **argv) {
 				should_continue = 1;
 				i--;
 			}
+			if (!strncmp(brainfuck_code+i, ",,", 2)) {
+				memmove(brainfuck_code+i, brainfuck_code+i+1, (brainfuck_code_size+1)-i-1);
+				brainfuck_code_size -= 1;
+				should_continue = 1;
+				i--;
+			}
 		}
 		if (brainfuck_code_size < 2) break;
 		if (!should_continue) break;
@@ -259,6 +265,7 @@ int main(int argc, char **argv) {
 		brainfuck_instruction_t *instruction = &instructions[i];
 		if (instruction->machine_code) free(instruction->machine_code);
 	}
+	debug_printf("Finished executing.\n");
 	free(instructions);
 
 	// Make the function executable
