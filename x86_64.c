@@ -11,6 +11,8 @@ uint8_t *make_jit_footer(uint8_t *size) {
 	uint8_t *instruction = &shared_instruction_buffer[0];
 	static const uint8_t template[] = {
 		0x48, 0x29, 0xC0, // SUB RAX, RAX
+		0x5E,             // POP RSI
+		0x5F,             // POP RDI
 		0xC3              // RET
 	};
 	if (size) *size = sizeof(template);
@@ -22,6 +24,8 @@ uint8_t *make_jit_header(uint8_t *size) {
 	assert(sizeof(void *) == 8);
 	uint8_t *instruction = &shared_instruction_buffer[0];
 	static const uint8_t template[] = {
+		0x57,                                                       // PUSH RDI
+		0x56,                                                       // PUSH RSI
 		0x48, 0x29, 0xC9,                                           // SUB RCX, RCX
 		0x48, 0xBE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // MOV RSI, memory_base
 		0x48, 0x29, 0xC0                                            // SUB RAX, RAX
@@ -29,7 +33,7 @@ uint8_t *make_jit_header(uint8_t *size) {
 	if (size) *size = sizeof(template);
 	memcpy(instruction, template, sizeof(template));
 	uint8_t *base = &brainfuck_memory[0];
-	memcpy(instruction+5, &base, 8);
+	memcpy(instruction+7, &base, 8);
 	return instruction;
 }
 
@@ -104,10 +108,12 @@ uint8_t *make_output_instruction(uint8_t *size) {
 		0x48, 0x01, 0xCE,                                           // ADD RSI, RCX
 		0x88, 0x06,                                                 // MOV [RSI], AL
 		0x50,                                                       // PUSH RAX
+		0x51,                                                       // PUSH RCX
 		0x48, 0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // MOV RAX, write_syscall
 		0x48, 0xBF, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // MOV RDI, 0x1
 		0x48, 0x89, 0xFA,                                           // MOV RDX, RDI
 		0x0F, 0x05,                                                 // SYSCALL
+		0x59,                                                       // POP RCX
 		0x48, 0x29, 0xCE,                                           // SUB RSI, RCX
 		0x58                                                        // POP RAX
 	};
@@ -117,7 +123,7 @@ uint8_t *make_output_instruction(uint8_t *size) {
 #if __APPLE__
 	SYSC |= 0x2000000;
 #endif
-	memcpy(instruction+8, &SYSC, 8);
+	memcpy(instruction+9, &SYSC, 8);
 	return instruction;
 }
 
@@ -127,10 +133,13 @@ uint8_t *make_input_instruction(uint8_t *size) {
 	static const uint8_t template[] = {
 		0x48, 0x01, 0xCE,                                           // ADD RSI, RCX
 		0x50,                                                       // PUSH RAX
+		0x51,                                                       // PUSH RCX
 		0x48, 0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // MOV RAX, read_syscall
 		0x48, 0xBA, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // MOV RDX, 0x1
 		0x48, 0x29, 0xFF,                                           // SUB RDI, RDI
 		0x0F, 0x05,                                                 // SYSCALL
+		0x59,                                                       // POP RCX
+		//TODO: Check if RAX contains an error
 		0x58,                                                       // POP RAX
 		0x8A, 0x06,                                                 // MOV AL, [RSI]
 		0x48, 0x29, 0xCE                                            // SUB RSI, RCX
@@ -141,7 +150,7 @@ uint8_t *make_input_instruction(uint8_t *size) {
 #if __APPLE__
 	SYSC |= 0x2000000;
 #endif
-	memcpy(instruction+6, &SYSC, 8);
+	memcpy(instruction+7, &SYSC, 8);
 	return instruction;
 }
 #endif
