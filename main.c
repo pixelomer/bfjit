@@ -17,6 +17,9 @@
 
 uint8_t brainfuck_memory[0x10000];
 uint8_t shared_instruction_buffer[0x100];
+char **argv;
+int argc;
+const char *input_name;
 
 typedef struct {
 	char instruction;
@@ -107,6 +110,7 @@ static brainfuck_instruction_t *parse_brainfuck(char *code, uint32_t *size_pt) {
 		instructions[i] = current_instruction;
 	}
 	size--;
+	uint8_t new_machine_code_size;
 	for (i=0; i<size; i++) {
 		brainfuck_instruction_t instruction = instructions[i];
 		int32_t offset = 0;
@@ -115,7 +119,9 @@ static brainfuck_instruction_t *parse_brainfuck(char *code, uint32_t *size_pt) {
 			for (uint32_t j=i+1; j<instruction.matching_bracket_index; j++) {
 				offset += instructions[j].machine_code_size;
 			}
-			uint8_t *machine_code = make_loop_begin_instruction(offset, NULL);
+			uint8_t *machine_code = make_loop_begin_instruction(offset, &new_machine_code_size);
+			assert(machine_code);
+			assert(new_machine_code_size == instruction.machine_code_size);
 			memcpy(instruction.machine_code, machine_code, instruction.machine_code_size);
 		}
 		else if (instruction.instruction == ']') {
@@ -123,7 +129,9 @@ static brainfuck_instruction_t *parse_brainfuck(char *code, uint32_t *size_pt) {
 			for (uint32_t j=i; j>instruction.matching_bracket_index; j--) {
 				offset -= instructions[j].machine_code_size;
 			}
-			uint8_t *machine_code = make_loop_end_instruction(offset, NULL);
+			uint8_t *machine_code = make_loop_end_instruction(offset, &new_machine_code_size);
+			assert(machine_code);
+			assert(new_machine_code_size == instruction.machine_code_size);
 			memcpy(instruction.machine_code, machine_code, instruction.machine_code_size);
 		}
 		instructions[i] = instruction;
@@ -132,20 +140,21 @@ static brainfuck_instruction_t *parse_brainfuck(char *code, uint32_t *size_pt) {
 	return instructions;
 }
 
-int main(int argc, char **argv) {
+int main(int _argc, char **_argv) {
+	argc = _argc;
+	argv = _argv;
 	FILE *input_file;
-	const char *input_name;
 	if (argc == 1) {
 		input_file = stdin;
-		input_name = "stdin";
+		input_name = "/dev/stdin";
 	}
 	else if (argc == 2) {
+		input_name = argv[1];
 		input_file = fopen(argv[1], "r");
 		if (!input_file) {
-			fprintf(stderr, "%s: %s: %s\n", argv[0], argv[1], strerror(errno));
+			fprintf(stderr, "%s: %s: %s\n", argv[0], input_name, strerror(errno));
 			return errno;
 		}
-		input_name = argv[1];
 	}
 	else {
 		fprintf(stderr, "Usage: %s [program]\n", argv[0]);
@@ -234,15 +243,17 @@ int main(int argc, char **argv) {
 	uint32_t buffer_index = 0;
 	uint8_t *function_construction_buffer;
 	uint32_t real_buffer_size = buffer_size;
+	int system_page_size = sysconf(_SC_PAGE_SIZE);
+	assert(system_page_size != -1);
+	real_buffer_size += (system_page_size - (buffer_size % system_page_size)) % system_page_size;
+
 #if __APPLE__
-	function_construction_buffer = malloc(buffer_size);
+	assert(posix_memalign((void**)&function_construction_buffer, system_page_size, real_buffer_size) == 0);
 #elif __linux__
-	const int linux_page_size = sysconf(_SC_PAGE_SIZE);
-	assert(linux_page_size != -1);
-	real_buffer_size += (linux_page_size - (buffer_size % linux_page_size)) % linux_page_size;
-	function_construction_buffer = memalign(linux_page_size, real_buffer_size);
-	assert(function_construction_buffer != NULL);
+	function_construction_buffer = memalign(system_page_size, real_buffer_size);
 #endif
+	
+	assert(function_construction_buffer != NULL);
 	for (uint32_t i=0; i<count; i++) {
 		memcpy(function_construction_buffer+buffer_index, instructions[i].machine_code, instructions[i].machine_code_size);
 		buffer_index += instructions[i].machine_code_size;
