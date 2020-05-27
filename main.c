@@ -16,7 +16,7 @@
 #endif
 
 uint8_t brainfuck_memory[0x10000];
-uint8_t shared_instruction_buffer[0x400];
+uint8_t shared_instruction_buffer[0x100];
 
 typedef struct {
 	char instruction;
@@ -271,7 +271,6 @@ int main(int argc, char **argv) {
 	// Call the function
 	debug_printf("Executing...\n");
 	int return_value = !!((int(*)(void))function_construction_buffer)();
-	debug_printf("Execution completed.\n");
 
 	// Free the function
 #if __APPLE__

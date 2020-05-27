@@ -13,7 +13,7 @@
 #endif
 
 extern uint8_t brainfuck_memory[0x10000];
-extern uint8_t shared_instruction_buffer[0x400];
+extern uint8_t shared_instruction_buffer[0x100];
 extern uint8_t *make_jit_footer(uint8_t *size);
 extern uint8_t *make_jit_header(uint8_t *size);
 extern uint8_t *make_add_instruction(uint8_t change, uint8_t *size);
