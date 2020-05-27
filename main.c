@@ -342,6 +342,7 @@ int main(int _argc, char **_argv) {
 	// Call the function
 	debug_printf("Executing...\n");
 	int return_value = !!((int(*)(void))function_construction_buffer)();
+	debug_printf("Execution completed.\n");
 
 	// Free the function
 #if __APPLE__
