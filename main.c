@@ -31,6 +31,25 @@ typedef struct {
 	};
 } brainfuck_instruction_t;
 
+typedef enum {
+	MemoryPointerOverflowBehaviourInvalid = 3,
+	MemoryPointerOverflowBehaviourExit = 2,
+	MemoryPointerOverflowBehaviourLog = 1,
+	MemoryPointerOverflowBehaviourDoNothing = 0
+} mem_pt_overflow_behaviour_t;
+static mem_pt_overflow_behaviour_t overflow_behaviour = MemoryPointerOverflowBehaviourDoNothing;
+
+void memory_pt_overflow_handler(void) {
+	if (overflow_behaviour == MemoryPointerOverflowBehaviourLog) {
+		overflow_behaviour = MemoryPointerOverflowBehaviourDoNothing;
+		fprintf(stderr, "[!!!] The memory pointer overflowed! This program might require more than 64KiBs of memory, which isn't supported.\n");
+	}
+	else if (overflow_behaviour == MemoryPointerOverflowBehaviourExit) {
+		fprintf(stderr, "[!!!] The memory pointer overflowed. Exiting.\n");
+		exit(-2);
+	}
+}
+
 static brainfuck_instruction_t *parse_brainfuck(char *code, uint32_t *size_pt) {
 	uint32_t size=1;
 	brainfuck_instruction_t *instructions = malloc(size * sizeof(brainfuck_instruction_t));
@@ -143,6 +162,27 @@ static brainfuck_instruction_t *parse_brainfuck(char *code, uint32_t *size_pt) {
 int main(int _argc, char **_argv) {
 	argc = _argc;
 	argv = _argv;
+	
+	// Read the environment variables
+	{
+		const char *env_var = getenv("BFJIT_MEMPT_OVERFLOW_BEHAVIOUR");
+		if (env_var) {
+			overflow_behaviour = MemoryPointerOverflowBehaviourInvalid;
+			if (strlen(env_var) == 1) switch (*env_var - '0') {
+				case MemoryPointerOverflowBehaviourDoNothing:
+				case MemoryPointerOverflowBehaviourExit:
+				case MemoryPointerOverflowBehaviourLog:
+					overflow_behaviour = *env_var - '0';
+					break;
+			}
+			if (overflow_behaviour == MemoryPointerOverflowBehaviourInvalid) {
+				fprintf(stderr, "%s: Igoring invalid overflow behaviour\n", argv[0]);
+				overflow_behaviour = MemoryPointerOverflowBehaviourDoNothing;
+			}
+		}
+	}
+
+	// Open the input file
 	FILE *input_file;
 	if (argc == 1) {
 		input_file = stdin;

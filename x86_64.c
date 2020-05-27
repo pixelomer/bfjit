@@ -11,8 +11,6 @@ uint8_t *make_jit_footer(uint8_t *size) {
 	uint8_t *instruction = &shared_instruction_buffer[0];
 	static const uint8_t template[] = {
 		0x48, 0x29, 0xC0, // SUB RAX, RAX
-		0x5E,             // POP RSI
-		0x5F,             // POP RDI
 		0xC3              // RET
 	};
 	if (size) *size = sizeof(template);
@@ -24,8 +22,6 @@ uint8_t *make_jit_header(uint8_t *size) {
 	assert(sizeof(void *) == 8);
 	uint8_t *instruction = &shared_instruction_buffer[0];
 	static const uint8_t template[] = {
-		0x57,                                                       // PUSH RDI
-		0x56,                                                       // PUSH RSI
 		0x48, 0x29, 0xC9,                                           // SUB RCX, RCX
 		0x48, 0xBE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // MOV RSI, memory_base
 		0x48, 0x29, 0xC0                                            // SUB RAX, RAX
@@ -33,7 +29,7 @@ uint8_t *make_jit_header(uint8_t *size) {
 	if (size) *size = sizeof(template);
 	memcpy(instruction, template, sizeof(template));
 	uint8_t *base = &brainfuck_memory[0];
-	memcpy(instruction+7, &base, 8);
+	memcpy(instruction+5, &base, 8);
 	return instruction;
 }
 
@@ -80,16 +76,27 @@ uint8_t *make_loop_end_instruction(int32_t loop_begin_offset, uint8_t *size) {
 uint8_t *make_increment_memory_pt_instruction(uint16_t change, uint8_t *size) {
 	uint8_t *instruction = &shared_instruction_buffer[0];
 	static const uint8_t template[] = {
-		0x48, 0x01, 0xCE,             // ADD RSI, RCX
-		0x88, 0x06,                   // MOV [RSI], AL
-		0x48, 0x29, 0xCE,             // SUB RSI, RCX
-		0x66, 0x81, 0xC1, 0xFF, 0xFF, // ADD CX, change
-		0x48, 0x01, 0xCE,             // ADD RSI, RCX
-		0x8A, 0x06,                   // MOV AL, [RSI]
-		0x48, 0x29, 0xCE              // SUB RSI, RCX
+		0x48, 0x01, 0xCE,                                           // ADD RSI, RCX
+		0x88, 0x06,                                                 // MOV [RSI], AL
+		0x48, 0x29, 0xCE,                                           // SUB RSI, RCX
+		0x66, 0x81, 0xC1, 0xFF, 0xFF,                               // ADD CX, change
+		0x71, 0x12,                                                 // JNO +14
+		0x50,                                                       // PUSH RAX
+		0x56,                                                       // PUSH RSI
+		0x51,                                                       // PUSH RCX
+		0x48, 0xB8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // MOV RAX, overflow_handler
+		0xFF, 0xD0,                                                 // CALL RAX
+		0x59,                                                       // POP RCX
+		0x5E,                                                       // POP RSI
+		0x58,                                                       // POP RAX
+		0x48, 0x01, 0xCE,                                           // ADD RSI, RCX
+		0x8A, 0x06,                                                 // MOV AL, [RSI]
+		0x48, 0x29, 0xCE                                            // SUB RSI, RCX
 	};
 	if (size) *size = sizeof(template);
+	void(*fn)(void) = memory_pt_overflow_handler;
 	memcpy(instruction, template, sizeof(template));
+	memcpy(instruction+20, &fn, 8);
 	memcpy(instruction+11, &change, 2);
 	return instruction;
 }

@@ -19,6 +19,7 @@ extern int argc;
 extern const char *input_name;
 extern uint8_t *make_jit_footer(uint8_t *size);
 extern uint8_t *make_jit_header(uint8_t *size);
+extern void memory_pt_overflow_handler(void);
 extern uint8_t *make_add_instruction(uint8_t change, uint8_t *size);
 extern uint8_t *make_substract_instruction(uint8_t change, uint8_t *size);
 extern uint8_t *make_loop_begin_instruction(int32_t loop_end_offset, uint8_t *size);
