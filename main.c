@@ -243,19 +243,26 @@ int main(int _argc, char **_argv) {
 				brainfuck_code_size -= 2;
 				should_continue = 1;
 				i--;
+				continue;
 			}
-			else if (!strncmp(brainfuck_code+i, ",,", 2)) {
+			bool should_remove_duplicates = (
+				!strncmp(brainfuck_code+i, ",,", 2) ||
+				!strncmp(brainfuck_code+i, "00", 2) ||
+			)
+			if (should_remove_duplicates) {
 				memmove(brainfuck_code+i, brainfuck_code+i+1, strlen(brainfuck_code+i+1)+1);
 				brainfuck_code_size -= 1;
 				should_continue = 1;
 				i--;
+				continue;
 			}
-			else if (!strncmp(brainfuck_code+i, "[-]", 3) && !strncmp(brainfuck_code+i, "[+]", 3)) {
+			if (!strncmp(brainfuck_code+i, "[-]", 3) && !strncmp(brainfuck_code+i, "[+]", 3)) {
 				memmove(brainfuck_code+i, brainfuck_code+i+2, strlen(brainfuck_code+i+2)+1);
 				brainfuck_code[i] = '0';
 				brainfuck_code_size -= 2;
 				should_continue = 1;
 				i--;
+				continue;
 			}
 		}
 		if (brainfuck_code_size < 2) break;
