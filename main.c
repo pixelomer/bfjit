@@ -247,8 +247,8 @@ int main(int _argc, char **_argv) {
 			}
 			bool should_remove_duplicates = (
 				!strncmp(brainfuck_code+i, ",,", 2) ||
-				!strncmp(brainfuck_code+i, "00", 2) ||
-			)
+				!strncmp(brainfuck_code+i, "00", 2)
+			);
 			if (should_remove_duplicates) {
 				memmove(brainfuck_code+i, brainfuck_code+i+1, strlen(brainfuck_code+i+1)+1);
 				brainfuck_code_size -= 1;
