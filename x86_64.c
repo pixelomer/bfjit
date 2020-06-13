@@ -87,9 +87,7 @@ uint8_t *make_loop_end_instruction(int32_t loop_begin_offset, uint8_t *size) {
 uint8_t *make_increment_memory_pt_instruction(uint16_t change, uint8_t *size) {
 	uint8_t *instruction = &shared_instruction_buffer[0];
 	static const uint8_t template[] = {
-		0x48, 0x01, 0xCE,                                           // ADD RSI, RCX
-		0x88, 0x06,                                                 // MOV [RSI], AL
-		0x48, 0x29, 0xCE,                                           // SUB RSI, RCX
+		0x88, 0x04, 0x0E,                                           // MOV [RSI+RCX], AL
 		0x66, 0x81, 0xC1, 0xFF, 0xFF,                               // ADD CX, change
 		0x71, 0x12,                                                 // JNO +14
 		0x50,                                                       // PUSH RAX
@@ -100,22 +98,20 @@ uint8_t *make_increment_memory_pt_instruction(uint16_t change, uint8_t *size) {
 		0x59,                                                       // POP RCX
 		0x5E,                                                       // POP RSI
 		0x58,                                                       // POP RAX
-		0x48, 0x01, 0xCE,                                           // ADD RSI, RCX
-		0x8A, 0x06,                                                 // MOV AL, [RSI]
-		0x48, 0x29, 0xCE                                            // SUB RSI, RCX
+		0x8A, 0x04, 0x0E,                                           // MOV AL, [RSI+RCX]
 	};
 	if (size) *size = sizeof(template);
 	void(*fn)(void) = memory_pt_overflow_handler;
 	memcpy(instruction, template, sizeof(template));
-	memcpy(instruction+20, &fn, 8);
-	memcpy(instruction+11, &change, 2);
+	memcpy(instruction+15, &fn, 8);
+	memcpy(instruction+6, &change, 2);
 	return instruction;
 }
 
 // <
 uint8_t *make_decrement_memory_pt_instruction(uint16_t change, uint8_t *size) {
 	uint8_t *instruction = make_increment_memory_pt_instruction(change, size);
-	instruction[10] = 0xE9;
+	instruction[5] = 0xE9;
 	return instruction;
 }
 
