@@ -256,7 +256,7 @@ int main(int _argc, char **_argv) {
 				i--;
 				continue;
 			}
-			if (!strncmp(brainfuck_code+i, "[-]", 3) && !strncmp(brainfuck_code+i, "[+]", 3)) {
+			if (!strncmp(brainfuck_code+i, "[-]", 3) || !strncmp(brainfuck_code+i, "[+]", 3)) {
 				memmove(brainfuck_code+i, brainfuck_code+i+2, strlen(brainfuck_code+i+2)+1);
 				brainfuck_code[i] = '0';
 				brainfuck_code_size -= 2;
