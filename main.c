@@ -246,7 +246,7 @@ int main(int _argc, char **_argv) {
 				continue;
 			}
 			bool should_remove_duplicates = (
-				!strncmp(brainfuck_code+i, ",,", 2) ||
+				// !strncmp(brainfuck_code+i, ",,", 2) ||
 				!strncmp(brainfuck_code+i, "00", 2)
 			);
 			if (should_remove_duplicates) {
